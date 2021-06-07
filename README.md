@@ -67,6 +67,9 @@ The major OpenYurt components consist of:
 - **Yurt tunnel (server/agent)**: `TunnelServer` connects with the `TunnelAgent` daemon running in each edge node via a
   reverse proxy to establish a secure network access between the cloud site control plane and the edge nodes
   that are connected to the intranet.
+- **Node resource manager**: It manages local node resources of OpenYurt cluster in a unified manner.
+  It currently manages LVM, QuotaPath and Pmem Memory.
+  Please refer to [node-resource-manager](https://github.com/openyurtio/node-resource-manager) for more details.
 
 ## Before you begin
 
@@ -132,11 +135,11 @@ If you have any questions or want to contribute, you are welcome to communicate 
 Other active communication channels:
 
 - Mailing List: https://groups.google.com/g/openyurt/
-- Slack: [channel](https://openyurt.slack.com/)
+- Slack: [channel](https://join.slack.com/t/openyurt/shared_invite/zt-rc5ecz4h-sEWU1vYx5gzc3_zx3En0jg)
 - Dingtalk Group (钉钉讨论群)
 
 <div align="left">
-  <img src="docs/img/ding.jpeg" width=25% title="dingtalk">
+  <img src="docs/img/ding.jpg" width=25% title="dingtalk">
 </div>
 
 ## License

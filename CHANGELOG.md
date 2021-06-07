@@ -6,14 +6,24 @@
 
 ### What's New
 
+**Node Resource Manager Released**
+
+Node resource manager is released in this version, which provides local node resources management of OpenYurt cluster in a unified manner.
+It currently supports LVM, QuotaPath and Pmem, and create or update the compute, storage resources based on local devices.
+It works as daemonset spread on each edge node, and manages local resources with a predefined spec stored in configmap.
+Please refer to the [usage doc](https://github.com/openyurtio/node-resource-manager/blob/main/docs/configmap.md) for details.
+([#1](https://github.com/openyurtio/node-resource-manager/pull/1), [@mowangdk](https://github.com/mowangdk), [@wenjun93](https://github.com/wenjun93))
+
 **Add Cloud Native IOT Device Management API definition**
+
 Inspiring by the Unix philosophy, "Do one thing and do it well", we believe that Kubernetes should focus on managing computing resources
 while edge devices management can be done by adopting existing edge computing platforms. Therefore, we define several generic
 custom resource definitions(CRD) that act as the mediator between OpenYurt and the edge platform.
 Any existing edge platforms can be integrated into the OpenYurt by implementing custom controllers for these CRDs.
-In addition, these CRDs allow users to manage edge devices in a declarative way, which provides users with a Kubernetes-native experience.([#233](https://github.com/openyurtio/openyurt/pull/233), [#236](https://github.com/openyurtio/openyurt/pull/236), [@Fei-Guo](https://github.com/Fei-Guo), [@yixingjia](https://github.com/yixingjia), [@charleszheng44](https://github.com/charleszheng44),)
+In addition, these CRDs allow users to manage edge devices in a declarative way, which provides users with a Kubernetes-native experience.([#233](https://github.com/openyurtio/openyurt/pull/233), [#236](https://github.com/openyurtio/openyurt/pull/236), [@Fei-Guo](https://github.com/Fei-Guo), [@yixingjia](https://github.com/yixingjia), [@charleszheng44](https://github.com/charleszheng44))
 
 **Kubernetes V1.18 is supported**
+
 OpenYurt officially supports version v1.18 of Kubernetes.
 Now, OpenYurt users are able to convert v1.18 Kubernetes cluster to OpenYurt cluster or
 deploy components of OpenYurt on v1.18 Kubernetes cluster manually. the main work for supporting v1.18 Kubernetes as following:
@@ -23,23 +33,27 @@ deploy components of OpenYurt on v1.18 Kubernetes cluster manually. the main wor
 and based on Kubernetes compatibility, v1.16 Kubernetes is still supported. ([#288](https://github.com/openyurtio/openyurt/pull/288), [@rambohe-ch](https://github.com/rambohe-ch))
 
 **UnitedDeployment support patch for pool**
+
 UnitedDeployment controller provides a new way to manage pods in multi-pool by using multiple workloads.
 Each workload managed by UnitedDeployment is called a pool and user can only configure the workload replicas in the pool.
 Based on the patch feature, besides the workload replicas configuration, user can easily configure other fields(like images and
 resoures) of workloads in the pool.([#242](https://github.com/openyurtio/openyurt/issues/242), [#12](https://github.com/openyurtio/yurt-app-manager/pull/12), [@kadisi](https://github.com/kadisi))
 
 **Support caching CRD resources by yurthub**
+
 Because resources in the resourceToKindMap can be cached by yurt-hub component, when network between cloud and edge disconnected,
 if any pod(eg: calico) on the edge node that used some resources(like crd) not in the above map want to run continuously,
 that is to say, the pod can not restarted successfully because resources(like crd) are not cached by yurt-hub.
 This PR can solve this limitation. Now yurt-hub is able to cache all kubernetes resources, including crd resource that defined by user.([#162](https://github.com/openyurtio/openyurt/issues/162), [#231](https://github.com/openyurtio/openyurt/pull/231), [#225](https://github.com/openyurtio/openyurt/pull/225), [#265](https://github.com/openyurtio/openyurt/pull/265), [@qclc](https://github.com/qclc), [@rambohe-ch](https://github.com/rambohe-ch))
 
 **Prometheus and Yurt-Tunnel-Server cross-node deployment is supported via DNS**
+
 In the edge computing scenario, the IP addresses of the edge nodes are likely to be the same. So we can not rely on the node IP
 to forward the request but should use the node hostname(unique in one cluster).
 This PR provides the ability for the yurt-tunnel-server to handle requests in the form of scheme://[hostname]:[port]/[req_path].([#270](https://github.com/openyurtio/openyurt/pull/270), [#284](https://github.com/openyurtio/openyurt/pull/284), [@SataQiu](https://github.com/SataQiu), [@rambohe-ch](https://github.com/rambohe-ch))
 
 **Support kind cluster and node level conversion by yurtctl**
+
 OpenYurt supports the conversion between the OpenYurt cluster and the Kubernetes cluster created by minikube, kubeadm, and ack.
 Now OpenYurt supports the conversion between kind cluster and OpenYurt cluster.
 ([#230](https://github.com/openyurtio/openyurt/issues/230), [#206](https://github.com/openyurtio/openyurt/pull/206), [#220](https://github.com/openyurtio/openyurt/pull/220), [#234](https://github.com/openyurtio/openyurt/pull/234), [@Peeknut](https://github.com/Peeknut))

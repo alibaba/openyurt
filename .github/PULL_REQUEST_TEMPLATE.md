@@ -1,20 +1,54 @@
-<!-- 
-Please make sure you have read and understood the contributing guidelines;
-https://github.com/openyurtio/openyurt/blob/master/CONTRIBUTING.md -->
-
-### Ⅰ. Describe what this PR does
+<!--  Thanks for sending a pull request!  Here are some tips for you:
+https://github.com/openyurtio/openyurt/blob/master/CONTRIBUTING.md 
+-->
 
 
-### Ⅱ. Does this pull request fix one issue?
-<!--If so, add "fixes #xxxx" below in the next line, for example, fixes #15. Otherwise, add "NONE" -->
+#### What type of PR is this?
+> Uncomment only one ` /kind <>` line, hit enter to put that in a new line, and remove leading whitespace from that line:
+> /kind bug
+> /kind documentation
+> /kind enhancement
+> /kind good-first-issue
+> /kind feature
+> /kind question
+> /kind design
+> /sig ai
+> /sig iot
+> /sig network
+> /sig storage
+> /sig storage
 
 
-### Ⅲ. List the added test cases (unit test/integration test) if any, please explain if no tests are needed.
+
+#### What this PR does / why we need it:
+
+#### Which issue(s) this PR fixes:
+<!--
+*Automatically closes linked issue when PR is merged.
+Usage: `Fixes #<issue number>`, or `Fixes (paste link of issue)`.
+-->
+Fixes #
+
+#### Special notes for your reviewer:
+<!--
+use this label to assign your reviewer
+/assign @your_reviewer
+-->
 
 
-### Ⅳ. Describe how to verify it
+#### Does this PR introduce a user-facing change?
+<!--
+If no, just write "NONE" in the release-note block below.
+If yes, a release note is required:
+Enter your extended release note in the block below. If the PR requires additional action from users switching to the new release, include the string "action required".
 
+-->
+```release-note
 
-### Ⅴ. Special notes for reviews
+```
 
-
+#### other Note
+<!--
+If your current PR is still working in process, start the PR title name with [WIP], such as: [WIP] add new crd for yurt-app-manager
+If the PR title name begins with [WIP], OpenYurt-bot automatically adds a do-not-merge/work-in-progress label for your pr 
+-->

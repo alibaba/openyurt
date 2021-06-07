@@ -117,6 +117,9 @@ func deletePodHandler(c clientset.Interface, emitEventFunc func(types.Namespaced
 			}
 			time.Sleep(10 * time.Millisecond)
 		}
+		if err != nil {
+			klog.Errorf("NoExecuteTaintManager delete pod %v with error: %v", args.NamespacedName.String(), err)
+		}
 		return err
 	}
 }

@@ -49,9 +49,7 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - services
   - endpoints
-  - configmaps
   verbs:
   - get
 - apiGroups:
@@ -61,6 +59,32 @@ rules:
   verbs:
   - list
   - watch
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - list
+  - watch
+  - get
+  - create
+  - update
+- apiGroups:
+  - "coordination.k8s.io"
+  resources:
+  - leases
+  verbs:
+  - create
+  - get
+  - update
 `
 	YurttunnelServerServiceAccount = `
 apiVersion: v1

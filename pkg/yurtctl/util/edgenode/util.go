@@ -177,7 +177,7 @@ func PrepareKubeConfigPath(flags *pflag.FlagSet) (string, error) {
 	if kbCfgPath == "" {
 		if home := homedir.HomeDir(); home != "" {
 			homeKbCfg := filepath.Join(home, ".kube", "config")
-			if ok, _ := FileExists(kbCfgPath); ok {
+			if ok, _ := FileExists(homeKbCfg); ok {
 				kbCfgPath = homeKbCfg
 			}
 		}

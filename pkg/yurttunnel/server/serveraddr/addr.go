@@ -169,7 +169,7 @@ func extractTunnelServerDNSandIPs(svc *v1.Service, eps *v1.Endpoints, nodeLst *v
 	}
 
 	// extract dns and ip from ClusterIP info
-	dnsNames = append(dnsNames, getDefaultDomainsForSvc(svc.Namespace, svc.Name)...)
+	dnsNames = append(dnsNames, GetDefaultDomainsForSvc(svc.Namespace, svc.Name)...)
 	if svc.Spec.ClusterIP != "None" {
 		ips = append(ips, net.ParseIP(svc.Spec.ClusterIP))
 	}
@@ -266,7 +266,7 @@ func getNodePortDNSandIP(nodeLst *v1.NodeList) ([]string, []net.IP, error) {
 }
 
 // getDefaultDomainsForSvc get default domains for specified service
-func getDefaultDomainsForSvc(ns, name string) []string {
+func GetDefaultDomainsForSvc(ns, name string) []string {
 	domains := make([]string, 0)
 	if len(ns) == 0 || len(name) == 0 {
 		return domains

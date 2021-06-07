@@ -2,7 +2,7 @@
 name: Feature Request
 about: Suggest an idea for this project
 title: "[feature request]"
-labels: kind/feature-request
+labels: kind/feature
 
 ---
 
@@ -12,3 +12,7 @@ labels: kind/feature-request
 
 
 **Why is this needed**:
+
+
+**others**
+/kind feature

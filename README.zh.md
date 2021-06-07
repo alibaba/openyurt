@@ -99,11 +99,11 @@ _output/bin/yurtctl revert
 如果您对本项目有任何疑问或想做出贡献，欢迎通过 github issue 或 pull request 来沟通相关问题，其他有效的沟通渠道如下所示：
 
 - 邮件组: https://groups.google.com/g/openyurt/
-- Slack: [channel](https://openyurt.slack.com/)
+- Slack: [channel](https://join.slack.com/t/openyurt/shared_invite/zt-rc5ecz4h-sEWU1vYx5gzc3_zx3En0jg)
 - Dingtalk Group (钉钉讨论群)
 
 <div align="left">
-  <img src="docs/img/ding.jpeg" width=25% title="dingtalk">
+  <img src="docs/img/ding.jpg" width=25% title="dingtalk">
 </div>
 
 ## 许可证

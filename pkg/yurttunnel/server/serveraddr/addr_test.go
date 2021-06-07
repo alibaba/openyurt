@@ -28,7 +28,7 @@ import (
 )
 
 func TestGetDefaultDomainsForSvcInputParamEmptyChar(t *testing.T) {
-	domains := getDefaultDomainsForSvc("", "")
+	domains := GetDefaultDomainsForSvc("", "")
 	if len(domains) != 0 {
 		t.Error("domains len is not equal zero")
 	}
@@ -37,7 +37,7 @@ func TestGetDefaultDomainsForSvcInputParamEmptyChar(t *testing.T) {
 func TestGetDefaultDomainsForSvc(t *testing.T) {
 	ns := "hello"
 	name := "world"
-	domains := getDefaultDomainsForSvc(ns, name)
+	domains := GetDefaultDomainsForSvc(ns, name)
 	if len(domains) == 0 {
 		t.Log("domains len is zero")
 	} else {

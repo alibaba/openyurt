@@ -263,7 +263,7 @@ func removeYurtTunnelServer(client *kubernetes.Clientset) error {
 		return fmt.Errorf("fail to delete the daemonset/%s: %s",
 			constants.YurttunnelServerComponentName, err)
 	}
-	klog.V(4).Infof("daemonset/%s is deleted", constants.YurttunnelServerComponentName)
+	klog.V(4).Infof("deployment/%s is deleted", constants.YurttunnelServerComponentName)
 
 	// 2.1 remove the Service
 	if err := client.CoreV1().Services(constants.YurttunnelNamespace).
