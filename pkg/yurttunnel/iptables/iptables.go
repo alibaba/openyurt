@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"sync"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -72,7 +73,7 @@ type iptablesJumpChain struct {
 // IptableManager interface defines the method for adding dnat rules to host
 // that needs to send network packages to kubelets
 type IptablesManager interface {
-	Run(stopCh <-chan struct{})
+	Run(stopCh <-chan struct{}, wg *sync.WaitGroup)
 }
 
 // iptablesManager implements the IptablesManager
@@ -140,7 +141,8 @@ func NewIptablesManager(client clientset.Interface,
 }
 
 // Run starts the iptablesManager that will updates dnat rules periodically
-func (im *iptablesManager) Run(stopCh <-chan struct{}) {
+func (im *iptablesManager) Run(stopCh <-chan struct{}, wg *sync.WaitGroup) {
+	defer wg.Done()
 	// wait the nodeInformer has synced
 	if !cache.WaitForCacheSync(stopCh,
 		im.nodeInformer.Informer().HasSynced) {
@@ -157,11 +159,49 @@ func (im *iptablesManager) Run(stopCh <-chan struct{}) {
 		select {
 		case <-stopCh:
 			klog.Info("stop the iptablesManager")
+			im.cleanupIptableSetting()
 			return
 		case <-ticker.C:
 			im.syncIptableSetting()
 		}
 	}
+}
+
+func (im *iptablesManager) cleanupIptableSetting() {
+	dnatPorts, err := util.GetConfiguredDnatPorts(im.kubeClient, im.insecurePort)
+	if err != nil {
+		klog.Errorf("failed to cleanup iptables rules, %v", err)
+		return
+	}
+	_, deletedDnatPorts := im.getDeletedPorts(dnatPorts)
+	currentDnatPorts := append(dnatPorts, kubeletSecurePort, kubeletInsecurePort)
+
+	var deletedJumpChains []iptablesJumpChain
+	for _, port := range deletedDnatPorts {
+		deletedJumpChains = append(deletedJumpChains, iptablesJumpChain{
+			table:     iptables.TableNAT,
+			dstChain:  iptables.Chain(fmt.Sprintf("%s%s", yurttunnelPortChainPrefix, port)),
+			srcChain:  yurttunnelServerPortChain,
+			comment:   fmt.Sprintf("jump to port %s", port),
+			extraArgs: []string{"-p", "tcp", "--dport", port},
+		})
+	}
+	for _, port := range currentDnatPorts {
+		deletedJumpChains = append(deletedJumpChains, iptablesJumpChain{
+			table:     iptables.TableNAT,
+			dstChain:  iptables.Chain(fmt.Sprintf("%s%s", yurttunnelPortChainPrefix, port)),
+			srcChain:  yurttunnelServerPortChain,
+			comment:   fmt.Sprintf("jump to port %s", port),
+			extraArgs: []string{"-p", "tcp", "--dport", port},
+		})
+	}
+	deletedJumpChains = append(deletedJumpChains, iptablesJumpChains[0])
+
+	if err := im.deleteJumpChains(deletedJumpChains); err != nil {
+		klog.Errorf("failed to cleanup iptables rules, %v", err)
+		return
+	}
+	klog.Info("cleanup iptables rules succeed")
 }
 
 func (im *iptablesManager) deleteJumpChains(jumpChains []iptablesJumpChain) error {

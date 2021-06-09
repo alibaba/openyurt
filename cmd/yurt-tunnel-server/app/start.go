@@ -18,6 +18,7 @@ package app
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/openyurtio/openyurt/cmd/yurt-tunnel-server/app/config"
@@ -74,6 +75,7 @@ func NewYurttunnelServerCommand(stopCh <-chan struct{}) *cobra.Command {
 
 // run starts the yurttunel-server
 func Run(cfg *config.CompletedConfig, stopCh <-chan struct{}) error {
+	var wg sync.WaitGroup
 	// 0. start the DNS controller
 	if cfg.EnableDNSController {
 		dnsController, err := dns.NewCoreDNSRecordController(cfg.Client,
@@ -95,7 +97,8 @@ func Run(cfg *config.CompletedConfig, stopCh <-chan struct{}) error {
 		if iptablesMgr == nil {
 			return fmt.Errorf("fail to create a new IptableManager")
 		}
-		go iptablesMgr.Run(stopCh)
+		wg.Add(1)
+		go iptablesMgr.Run(stopCh, &wg)
 	}
 
 	// 2. create a certificate manager for the tunnel server and run the
@@ -153,5 +156,6 @@ func Run(cfg *config.CompletedConfig, stopCh <-chan struct{}) error {
 	util.RunMetaServer(cfg.ListenMetaAddr)
 
 	<-stopCh
+	wg.Wait()
 	return nil
 }
