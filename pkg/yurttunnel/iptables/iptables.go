@@ -175,33 +175,36 @@ func (im *iptablesManager) cleanupIptableSetting() {
 	}
 	_, deletedDnatPorts := im.getDeletedPorts(dnatPorts)
 	currentDnatPorts := append(dnatPorts, kubeletSecurePort, kubeletInsecurePort)
-
-	var deletedJumpChains []iptablesJumpChain
+	deletedJumpChains := []iptables.Chain{iptablesJumpChains[0].dstChain}
 	for _, port := range deletedDnatPorts {
-		deletedJumpChains = append(deletedJumpChains, iptablesJumpChain{
-			table:     iptables.TableNAT,
-			dstChain:  iptables.Chain(fmt.Sprintf("%s%s", yurttunnelPortChainPrefix, port)),
-			srcChain:  yurttunnelServerPortChain,
-			comment:   fmt.Sprintf("jump to port %s", port),
-			extraArgs: []string{"-p", "tcp", "--dport", port},
-		})
+		deletedJumpChains = append(deletedJumpChains, iptables.Chain(fmt.Sprintf("%s%s", yurttunnelPortChainPrefix, port)))
 	}
 	for _, port := range currentDnatPorts {
-		deletedJumpChains = append(deletedJumpChains, iptablesJumpChain{
-			table:     iptables.TableNAT,
-			dstChain:  iptables.Chain(fmt.Sprintf("%s%s", yurttunnelPortChainPrefix, port)),
-			srcChain:  yurttunnelServerPortChain,
-			comment:   fmt.Sprintf("jump to port %s", port),
-			extraArgs: []string{"-p", "tcp", "--dport", port},
-		})
+		deletedJumpChains = append(deletedJumpChains, iptables.Chain(fmt.Sprintf("%s%s", yurttunnelPortChainPrefix, port)))
 	}
-	deletedJumpChains = append(deletedJumpChains, iptablesJumpChains[0])
 
-	if err := im.deleteJumpChains(deletedJumpChains); err != nil {
-		klog.Errorf("failed to cleanup iptables rules, %v", err)
-		return
+	args := append(iptablesJumpChains[0].extraArgs, "-m", "comment", "--comment",
+		iptablesJumpChains[0].comment, "-j", string(iptablesJumpChains[0].dstChain))
+	if err := im.iptables.DeleteRule(iptablesJumpChains[0].table, iptablesJumpChains[0].srcChain, args...); err != nil {
+		klog.Errorf("failed to delete rule that %s chain %s jumps to %s: %v",
+			iptablesJumpChains[0].table, iptablesJumpChains[0].srcChain, iptablesJumpChains[0].dstChain, err)
 	}
-	klog.Info("cleanup iptables rules succeed")
+	im.deleteJumpChainsWithoutCheck(deletedJumpChains)
+	klog.Info("Complete cleanup iptables rules")
+}
+
+func (im *iptablesManager) deleteJumpChainsWithoutCheck(Chains []iptables.Chain) {
+	table := iptables.TableNAT
+	for _, chain := range Chains {
+		if err := im.iptables.FlushChain(table, chain); err != nil {
+			klog.Errorf("could not flush %s chain %s: %v",
+				table, chain, err)
+		}
+		if err := im.iptables.DeleteChain(table, chain); err != nil {
+			klog.Errorf("could not delete %s chain %s: %v",
+				table, chain, err)
+		}
+	}
 }
 
 func (im *iptablesManager) deleteJumpChains(jumpChains []iptablesJumpChain) error {
