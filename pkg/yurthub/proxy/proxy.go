@@ -23,6 +23,7 @@ import (
 	"github.com/openyurtio/openyurt/pkg/yurthub/cachemanager"
 	"github.com/openyurtio/openyurt/pkg/yurthub/certificate/interfaces"
 	"github.com/openyurtio/openyurt/pkg/yurthub/healthchecker"
+	"github.com/openyurtio/openyurt/pkg/yurthub/kubernetes/meta"
 	"github.com/openyurtio/openyurt/pkg/yurthub/proxy/local"
 	"github.com/openyurtio/openyurt/pkg/yurthub/proxy/remote"
 	"github.com/openyurtio/openyurt/pkg/yurthub/proxy/util"
@@ -52,6 +53,7 @@ func NewYurtReverseProxyHandler(
 	transportMgr transport.Interface,
 	healthChecker healthchecker.HealthChecker,
 	certManager interfaces.YurtCertificateManager,
+	restMapperManager *meta.RESTMapperManager,
 	stopCh <-chan struct{}) (http.Handler, error) {
 	cfg := &server.Config{
 		LegacyAPIGroupPrefixes: sets.NewString(server.DefaultLegacyAPIPrefix),
@@ -65,6 +67,7 @@ func NewYurtReverseProxyHandler(
 		transportMgr,
 		healthChecker,
 		certManager,
+		restMapperManager,
 		stopCh)
 	if err != nil {
 		return nil, err

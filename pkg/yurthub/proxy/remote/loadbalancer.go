@@ -25,8 +25,11 @@ import (
 	"github.com/openyurtio/openyurt/pkg/yurthub/cachemanager"
 	"github.com/openyurtio/openyurt/pkg/yurthub/certificate/interfaces"
 	"github.com/openyurtio/openyurt/pkg/yurthub/healthchecker"
+	"github.com/openyurtio/openyurt/pkg/yurthub/kubernetes/meta"
+	util2 "github.com/openyurtio/openyurt/pkg/yurthub/proxy/util"
 	"github.com/openyurtio/openyurt/pkg/yurthub/transport"
 	"github.com/openyurtio/openyurt/pkg/yurthub/util"
+
 	"k8s.io/klog"
 )
 
@@ -114,9 +117,10 @@ type LoadBalancer interface {
 }
 
 type loadBalancer struct {
-	backends    []*RemoteProxy
-	algo        loadBalancerAlgo
-	certManager interfaces.YurtCertificateManager
+	backends          []*RemoteProxy
+	algo              loadBalancerAlgo
+	certManager       interfaces.YurtCertificateManager
+	restMapperManager *meta.RESTMapperManager
 }
 
 // NewLoadBalancer creates a loadbalancer for specified remote servers
@@ -127,6 +131,7 @@ func NewLoadBalancer(
 	transportMgr transport.Interface,
 	healthChecker healthchecker.HealthChecker,
 	certManager interfaces.YurtCertificateManager,
+	restMapperManager *meta.RESTMapperManager,
 	stopCh <-chan struct{}) (LoadBalancer, error) {
 	backends := make([]*RemoteProxy, 0, len(remoteServers))
 	for i := range remoteServers {
@@ -152,9 +157,10 @@ func NewLoadBalancer(
 	}
 
 	return &loadBalancer{
-		backends:    backends,
-		algo:        algo,
-		certManager: certManager,
+		backends:          backends,
+		algo:              algo,
+		certManager:       certManager,
+		restMapperManager: restMapperManager,
 	}, nil
 }
 
@@ -182,5 +188,6 @@ func (lb *loadBalancer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 	klog.V(3).Infof("picked backend %s by %s for request %s", b.Name(), lb.algo.Name(), util.ReqString(req))
-	b.ServeHTTP(rw, req)
+	handler := util2.WithUpdateRESTMapper(b, lb.restMapperManager)
+	handler.ServeHTTP(rw, req)
 }

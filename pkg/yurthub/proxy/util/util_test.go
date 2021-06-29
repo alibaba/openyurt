@@ -20,11 +20,17 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/openyurtio/openyurt/pkg/yurthub/kubernetes/meta"
+	"github.com/openyurtio/openyurt/pkg/yurthub/storage"
+	"github.com/openyurtio/openyurt/pkg/yurthub/storage/disk"
 	"github.com/openyurtio/openyurt/pkg/yurthub/util"
+
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/endpoints/filters"
 	"k8s.io/apiserver/pkg/endpoints/request"
@@ -378,4 +384,105 @@ func TestWithListRequestSelector(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestWithUpdateRESTMapper(t *testing.T) {
+	testcases := map[string]struct {
+		Verb      string
+		Path      string
+		cachedCRD []schema.GroupVersionKind
+		deleteCRD schema.GroupVersionResource
+		expectCRD []schema.GroupVersionResource
+	}{
+		"delete one exist CRD": {
+			Verb: "GET",
+			Path: "/apis/stable.example.com/v1/namespaces/default/crontabs",
+			cachedCRD: []schema.GroupVersionKind{
+				{Group: "samplecontroller.k8s.io", Version: "v1alpha1", Kind: "Foo"},
+				{Group: "stable.example.com", Version: "v1", Kind: "CronTab"},
+			},
+			deleteCRD: schema.GroupVersionResource{Group: "stable.example.com", Version: "v1", Resource: "crontabs"},
+			expectCRD: []schema.GroupVersionResource{
+				{Group: "samplecontroller.k8s.io", Version: "v1alpha1", Resource: "foos"},
+			},
+		},
+		"delete one non-existing CRD": {
+			Verb: "GET",
+			Path: "/apis/stable.example.com/v1/namespaces/default/crontabs",
+			cachedCRD: []schema.GroupVersionKind{
+				{Group: "samplecontroller.k8s.io", Version: "v1alpha1", Kind: "Foo"},
+			},
+			deleteCRD: schema.GroupVersionResource{Group: "stable.example.com", Version: "v1", Resource: "crontabs"},
+			expectCRD: []schema.GroupVersionResource{
+				{Group: "samplecontroller.k8s.io", Version: "v1alpha1", Resource: "foos"},
+			},
+		},
+	}
+
+	resolver := newTestRequestInfoResolver()
+	rootDir := "/tmp/restmapper"
+	restMapperManager := meta.NewRESTMapperManager(rootDir)
+	defer func() {
+		if err := os.RemoveAll(rootDir); err != nil {
+			t.Errorf("Unable to clean up test directory %q: %v", rootDir, err)
+		}
+	}()
+
+	for _, tc := range testcases {
+		req, _ := http.NewRequest(tc.Verb, tc.Path, nil)
+		req.RemoteAddr = "127.0.0.1"
+
+		var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			w.WriteHeader(http.StatusNotFound)
+		})
+
+		handler = WithUpdateRESTMapper(handler, restMapperManager)
+		handler = filters.WithRequestInfo(handler, resolver)
+
+		// initialize the cache CRD
+		for _, gvk := range tc.cachedCRD {
+			err := restMapperManager.UpdateKind(gvk)
+			if err != nil {
+				t.Errorf("failed to initialize the restmapper, %v", err)
+			}
+		}
+
+		// process 404 response
+		handler.ServeHTTP(httptest.NewRecorder(), req)
+
+		// verify CRD deletion
+		_, gvk := restMapperManager.KindFor(tc.deleteCRD)
+		if !gvk.Empty() {
+			t.Errorf("failed to delete CRD information.")
+		}
+		// verify whether there is another CRD deleted by mistake
+		for _, gvr := range tc.expectCRD {
+			_, gvk := restMapperManager.KindFor(gvr)
+			if gvk.Empty() {
+				t.Errorf("the expected CRD information is deleted by mistake: %v.", gvr)
+			}
+		}
+
+		dStorage, err := disk.NewDiskStorage(rootDir)
+		if err != nil {
+			t.Fatalf("failed to create disk storage, %v", err)
+		}
+		if err := resetRESTMapper(dStorage, tc.expectCRD, restMapperManager); err != nil {
+			t.Fatalf("failed to reset yurtHubRESTMapperManager, %v", err)
+		}
+	}
+}
+
+func resetRESTMapper(storage storage.Store, deleteCRDs []schema.GroupVersionResource, yrm *meta.RESTMapperManager) error {
+	for _, gvr := range deleteCRDs {
+		err := yrm.DeleteKindFor(gvr)
+		if err != nil {
+			return err
+		}
+	}
+	err := storage.Delete(meta.CacheDynamicRESTMapperKey)
+	if err != nil {
+		return err
+	}
+	return nil
 }

@@ -25,6 +25,7 @@ import (
 	"github.com/openyurtio/openyurt/cmd/yurthub/app/options"
 	"github.com/openyurtio/openyurt/pkg/projectinfo"
 	"github.com/openyurtio/openyurt/pkg/yurthub/cachemanager"
+	"github.com/openyurtio/openyurt/pkg/yurthub/kubernetes/meta"
 	"github.com/openyurtio/openyurt/pkg/yurthub/kubernetes/serializer"
 	"github.com/openyurtio/openyurt/pkg/yurthub/storage/factory"
 
@@ -53,6 +54,7 @@ type YurtHubConfiguration struct {
 	HubAgentDummyIfName         string
 	StorageWrapper              cachemanager.StorageWrapper
 	SerializerManager           *serializer.SerializerManager
+	RESTMapperManager           *meta.RESTMapperManager
 }
 
 // Complete converts *options.YurtHubOptions to *YurtHubConfiguration
@@ -69,6 +71,7 @@ func Complete(options *options.YurtHubOptions) (*YurtHubConfiguration, error) {
 	}
 	storageWrapper := cachemanager.NewStorageWrapper(storageManager)
 	serializerManager := serializer.NewSerializerManager()
+	restMapperManager := meta.NewRESTMapperManager(options.DiskCachePath)
 
 	hubServerAddr := net.JoinHostPort(options.YurtHubHost, options.YurtHubPort)
 	proxyServerAddr := net.JoinHostPort(options.YurtHubHost, options.YurtHubProxyPort)
@@ -94,6 +97,7 @@ func Complete(options *options.YurtHubOptions) (*YurtHubConfiguration, error) {
 		HubAgentDummyIfName:         options.HubAgentDummyIfName,
 		StorageWrapper:              storageWrapper,
 		SerializerManager:           serializerManager,
+		RESTMapperManager:           restMapperManager,
 	}
 
 	return cfg, nil

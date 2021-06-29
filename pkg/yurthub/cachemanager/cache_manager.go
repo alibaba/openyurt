@@ -28,6 +28,7 @@ import (
 	"strings"
 	"sync"
 
+	meta2 "github.com/openyurtio/openyurt/pkg/yurthub/kubernetes/meta"
 	"github.com/openyurtio/openyurt/pkg/yurthub/kubernetes/serializer"
 	"github.com/openyurtio/openyurt/pkg/yurthub/storage"
 	"github.com/openyurtio/openyurt/pkg/yurthub/util"
@@ -58,6 +59,7 @@ type cacheManager struct {
 	sync.RWMutex
 	storage               StorageWrapper
 	serializerManager     *serializer.SerializerManager
+	restMapperManager     *meta2.RESTMapperManager
 	cacheAgents           map[string]bool
 	listSelectorCollector map[string]string
 }
@@ -66,10 +68,12 @@ type cacheManager struct {
 func NewCacheManager(
 	storage StorageWrapper,
 	serializerMgr *serializer.SerializerManager,
+	restMapperMgr *meta2.RESTMapperManager,
 ) (CacheManager, error) {
 	cm := &cacheManager{
 		storage:               storage,
 		serializerManager:     serializerMgr,
+		restMapperManager:     restMapperMgr,
 		cacheAgents:           make(map[string]bool),
 		listSelectorCollector: make(map[string]string),
 	}
@@ -152,13 +156,14 @@ func (cm *cacheManager) queryListObject(req *http.Request) (runtime.Object, erro
 	if err != nil {
 		return nil, err
 	} else if len(objs) == 0 {
-		gvk, err = serializer.UnsafeDefaultRESTMapper.KindFor(schema.GroupVersionResource{
+		gvr := schema.GroupVersionResource{
 			Group:    info.APIGroup,
 			Version:  info.APIVersion,
 			Resource: info.Resource,
-		})
-		if err != nil {
-			return nil, err
+		}
+		_, gvk = cm.restMapperManager.KindFor(gvr)
+		if gvk.Empty() {
+			return nil, fmt.Errorf("no matches for %v", gvr)
 		}
 		kind = gvk.Kind
 	} else {
@@ -349,6 +354,11 @@ func (cm *cacheManager) saveListObject(ctx context.Context, info *apirequest.Req
 	}.String()
 	accessor := meta.NewAccessor()
 
+	// Verify if DynamicRESTMapper(which store the CRD info) needs to be updated
+	if err := cm.restMapperManager.UpdateKind(schema.GroupVersionKind{Group: info.APIGroup, Version: info.APIVersion, Kind: kind}); err != nil {
+		klog.Errorf("failed to update the DynamicRESTMapper %v", err)
+	}
+
 	comp, _ := util.ClientComponentFrom(ctx)
 	// even if no objects in cloud cluster, we need to
 	// make up a storage that represents the no resources
@@ -435,6 +445,12 @@ func (cm *cacheManager) saveOneObject(ctx context.Context, info *apirequest.Requ
 	if err != nil || key == "" {
 		klog.Errorf("failed to get cache key(%s:%s:%s:%s), %v", comp, info.Resource, info.Namespace, info.Name, err)
 		return err
+	}
+
+	// Verify if DynamicRESTMapper(which store the CRD info) needs to be updated
+	gvk := obj.GetObjectKind().GroupVersionKind()
+	if err := cm.restMapperManager.UpdateKind(gvk); err != nil {
+		klog.Errorf("failed to update the DynamicRESTMapper %v", err)
 	}
 
 	if err := cm.saveOneObjectWithValidation(key, obj); err != nil {

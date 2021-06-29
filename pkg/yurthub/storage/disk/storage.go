@@ -66,6 +66,7 @@ func NewDiskStorage(dir string) (storage.Store, error) {
 
 // Create new a file with key and contents or create dir only
 // when contents are empty.
+// Note: when the content is empty and the dir already exists, the create function will empty the current dir
 func (ds *diskStorage) Create(key string, contents []byte) error {
 	if key == "" {
 		return storage.ErrKeyIsEmpty
@@ -87,6 +88,21 @@ func (ds *diskStorage) Create(key string, contents []byte) error {
 			}
 			return err
 		} else if info.IsDir() {
+			// ensure that there are no files left locally before create an dir
+			if fileInfoList, err := ioutil.ReadDir(keyPath); err != nil {
+				return err
+			} else if len(fileInfoList) != 0 {
+				for _, f := range fileInfoList {
+					if f.IsDir() {
+						err = os.RemoveAll(filepath.Join(keyPath, f.Name()))
+					} else {
+						err = os.Remove(filepath.Join(keyPath, f.Name()))
+					}
+					if err != nil {
+						return err
+					}
+				}
+			}
 			return nil
 		} else {
 			return storage.ErrKeyHasNoContent

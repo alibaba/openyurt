@@ -24,7 +24,8 @@ import (
 	"strings"
 	"sync"
 
-	"k8s.io/apimachinery/pkg/api/meta"
+	"github.com/openyurtio/openyurt/pkg/yurthub/kubernetes/meta"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured/unstructuredscheme"
@@ -41,26 +42,6 @@ import (
 
 // YurtHubSerializer is a global serializer manager for yurthub
 var YurtHubSerializer = NewSerializerManager()
-
-// UnsafeDefaultRESTMapper is only used to check whether the GVK is in the scheme according to the GVR information
-var UnsafeDefaultRESTMapper = NewDefaultRESTMapperFromScheme()
-
-func NewDefaultRESTMapperFromScheme() *meta.DefaultRESTMapper {
-	s := scheme.Scheme
-	defaultGroupVersions := s.PrioritizedVersionsAllGroups()
-	mapper := meta.NewDefaultRESTMapper(defaultGroupVersions)
-	// enumerate all supported versions, get the kinds, and register with the mapper how to address
-	// our resources.
-	for _, gv := range defaultGroupVersions {
-		for kind := range s.KnownTypes(gv) {
-			//Since RESTMapper is only used for mapping GVR to GVK information,
-			//the scope field is not involved in actual use, so all scope are currently set to meta.RESTScopeNamespace
-			scope := meta.RESTScopeNamespace
-			mapper.Add(gv.WithKind(kind), scope)
-		}
-	}
-	return mapper
-}
 
 type yurtClientNegotiator struct {
 	recognized bool
@@ -99,11 +80,9 @@ func NewSerializerManager() *SerializerManager {
 
 // GetNegotiatedSerializer returns an NegotiatedSerializer object based on GroupVersionResource
 func (sm *SerializerManager) GetNegotiatedSerializer(gvr schema.GroupVersionResource) runtime.NegotiatedSerializer {
-	_, kindErr := UnsafeDefaultRESTMapper.KindFor(gvr)
-	if kindErr == nil {
+	if isScheme := meta.IsSchemeResource(gvr); isScheme {
 		return sm.NegotiatedSerializer
 	}
-
 	return sm.UnstructuredNegotiatedSerializer
 }
 
@@ -183,7 +162,7 @@ func (s UnstructuredNegotiatedSerializer) SupportedMediaTypes() []runtime.Serial
 
 //EncoderForVersion do nothing, but returns a encoder,
 //if the object is unstructured, the encoder will encode object without conversion
-func (s UnstructuredNegotiatedSerializer) EncoderForVersion(encoder runtime.Encoder, gv runtime.GroupVersioner) runtime.Encoder {
+func (s UnstructuredNegotiatedSerializer) EncoderForVersion(encoder runtime.Encoder, _ runtime.GroupVersioner) runtime.Encoder {
 	return encoder
 }
 
@@ -215,13 +194,11 @@ func (c unstructuredCreator) New(kind schema.GroupVersionKind) (runtime.Object, 
 
 // genClientNegotiator creates a ClientNegotiator for specified GroupVersionResource and gvr is recognized or not
 func (sm *SerializerManager) genClientNegotiator(gvr schema.GroupVersionResource) (runtime.ClientNegotiator, bool) {
-	_, kindErr := UnsafeDefaultRESTMapper.KindFor(gvr)
-	if kindErr == nil {
+	if isScheme := meta.IsSchemeResource(gvr); isScheme {
 		return runtime.NewClientNegotiator(sm.NegotiatedSerializer, gvr.GroupVersion()), true
 	}
 	klog.Infof("%#+v is not found in client-go runtime scheme", gvr)
 	return runtime.NewClientNegotiator(sm.UnstructuredNegotiatedSerializer, gvr.GroupVersion()), false
-
 }
 
 // Serializer is used for transforming objects into a serialized format and back for cache manager of hub agent.
@@ -287,7 +264,6 @@ func (s *Serializer) Decode(b []byte) (runtime.Object, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return out, nil
 }
 
