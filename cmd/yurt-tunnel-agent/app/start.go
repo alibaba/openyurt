@@ -18,6 +18,7 @@ package app
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/openyurtio/openyurt/cmd/yurt-tunnel-agent/app/config"
 	"github.com/openyurtio/openyurt/cmd/yurt-tunnel-agent/app/options"
@@ -30,6 +31,8 @@ import (
 	"github.com/openyurtio/openyurt/pkg/yurttunnel/util"
 
 	"github.com/spf13/cobra"
+
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/certificate"
 	"k8s.io/klog/v2"
 )
@@ -90,6 +93,17 @@ func Run(cfg *config.CompletedConfig, stopCh <-chan struct{}) error {
 		return err
 	}
 	agentCertMgr.Start()
+
+	// 2.1. waiting for the certificate is generated
+	_ = wait.PollUntil(5*time.Second, func() (bool, error) {
+		if agentCertMgr.Current() != nil {
+			return true, nil
+		}
+		klog.Infof("certificate %s not signed, waiting...",
+			projectinfo.GetAgentName())
+		return false, nil
+	}, stopCh)
+	klog.Infof("certificate %s ok", projectinfo.GetAgentName())
 
 	// 3. generate a TLS configuration for securing the connection to server
 	tlsCfg, err := pki.GenTLSConfigUseCertMgrAndCA(agentCertMgr,

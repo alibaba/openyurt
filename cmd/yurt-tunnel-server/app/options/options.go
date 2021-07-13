@@ -150,7 +150,7 @@ func (o *ServerOptions) Config() (*config.Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	cfg.SharedInformerFactory = informers.NewSharedInformerFactory(cfg.Client, 10*time.Second)
+	cfg.SharedInformerFactory = informers.NewSharedInformerFactory(cfg.Client, 24*time.Hour)
 
 	klog.Infof("yurttunnel server config: %#+v", cfg)
 	return cfg, nil

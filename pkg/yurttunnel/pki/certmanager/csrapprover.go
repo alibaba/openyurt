@@ -108,7 +108,25 @@ func enqueueObj(wq workqueue.RateLimitingInterface, obj interface{}) {
 		runtime.HandleError(err)
 		return
 	}
-	wq.AddRateLimited(key)
+
+	csr, ok := obj.(*certificates.CertificateSigningRequest)
+	if !ok {
+		klog.Errorf("%s is not a csr", key)
+		return
+	}
+
+	if !isYurttunelCSR(csr) {
+		klog.Infof("csr(%s) is not %s csr", csr.GetName(), projectinfo.GetTunnelName())
+		return
+	}
+
+	approved, denied := checkCertApprovalCondition(&csr.Status)
+	if !approved && !denied {
+		klog.Infof("non-approved and non-denied csr, enqueue: %s", key)
+		wq.AddRateLimited(key)
+	}
+
+	klog.V(4).Infof("approved or denied csr, ignore it: %s", key)
 }
 
 // NewCSRApprover creates a new YurttunnelCSRApprover
@@ -139,6 +157,7 @@ func approveYurttunnelCSR(
 	csrClient typev1beta1.CertificateSigningRequestInterface) error {
 	csr, ok := obj.(*certificates.CertificateSigningRequest)
 	if !ok {
+		klog.Infof("object is not csr: %v", obj)
 		return nil
 	}
 
@@ -149,12 +168,12 @@ func approveYurttunnelCSR(
 
 	approved, denied := checkCertApprovalCondition(&csr.Status)
 	if approved {
-		klog.V(4).Infof("csr(%s) is approved", csr.GetName())
+		klog.Infof("csr(%s) is approved", csr.GetName())
 		return nil
 	}
 
 	if denied {
-		klog.V(4).Infof("csr(%s) is denied", csr.GetName())
+		klog.Infof("csr(%s) is denied", csr.GetName())
 		return nil
 	}
 
