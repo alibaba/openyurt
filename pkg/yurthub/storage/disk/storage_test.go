@@ -63,7 +63,8 @@ func TestCreate(t *testing.T) {
 				data string
 			}{
 				"/kubelet/default/pods/foo": {
-					data: "test-pod1",
+					storage.ErrStorageNotFound,
+					"",
 				},
 			},
 		},

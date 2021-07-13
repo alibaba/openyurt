@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/openyurtio/openyurt/pkg/yurthub/kubernetes/meta"
 	"github.com/openyurtio/openyurt/pkg/yurthub/metrics"
 	"github.com/openyurtio/openyurt/pkg/yurthub/util"
 
@@ -31,6 +32,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	apirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/klog"
 )
@@ -290,5 +292,30 @@ func WithRequestTimeout(handler http.Handler) http.Handler {
 			}
 		}
 		handler.ServeHTTP(w, req)
+	})
+}
+
+// WithUpdateRESTMapper used to update the RESTMapper.
+func WithUpdateRESTMapper(handler http.Handler, manager *meta.RESTMapperManager) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		wrapperRW := newWrapperResponseWriter(w)
+		defer func() {
+			if info, exists := apirequest.RequestInfoFrom(req.Context()); exists {
+				// 404 Not Found: The CRD may have been unregistered and should be updated locally as well
+				if wrapperRW.statusCode == http.StatusNotFound && info.Verb == "list" {
+					gvr := schema.GroupVersionResource{
+						Group:    info.APIGroup,
+						Version:  info.APIVersion,
+						Resource: info.Resource,
+					}
+
+					err := manager.DeleteKindFor(gvr)
+					if err != nil {
+						klog.Errorf("failed: %v", err)
+					}
+				}
+			}
+		}()
+		handler.ServeHTTP(wrapperRW, req)
 	})
 }

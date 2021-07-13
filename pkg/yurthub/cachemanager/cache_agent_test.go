@@ -32,7 +32,7 @@ func TestInitCacheAgents(t *testing.T) {
 		t.Errorf("failed to create disk storage, %v", err)
 	}
 	s := NewStorageWrapper(dStorage)
-	m, _ := NewCacheManager(s, nil)
+	m, _ := NewCacheManager(s, nil, nil)
 
 	// default cache agents in fake store
 	b, err := s.GetRaw(cacheAgentsKey)
@@ -52,7 +52,7 @@ func TestInitCacheAgents(t *testing.T) {
 	// add agents for next init cache
 	_ = m.UpdateCacheAgents([]string{"agent1"})
 
-	_, _ = NewCacheManager(s, nil)
+	_, _ = NewCacheManager(s, nil, nil)
 
 	b2, err := s.GetRaw(cacheAgentsKey)
 	if err != nil {
@@ -81,7 +81,7 @@ func TestUpdateCacheAgents(t *testing.T) {
 		t.Errorf("failed to create disk storage, %v", err)
 	}
 	s := NewStorageWrapper(dStorage)
-	m, _ := NewCacheManager(s, nil)
+	m, _ := NewCacheManager(s, nil, nil)
 
 	testcases := map[string]struct {
 		desc         string
