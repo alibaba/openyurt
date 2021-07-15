@@ -84,6 +84,10 @@ s|__kubernetes_service_host__|1.2.3.4|;
 s|__kubernetes_service_port_https__|5678|' > /tmp/yurthub-ack.yaml &&
 scp -i <yourt-ssh-identity-file> /tmp/yurthub-ack.yaml root@us-west-1.192.168.0.88:/etc/kubernetes/manifests
 ```
+If you use bootstrap token, You should add `--join-token` parameters and set the value same as your bootstrap token.
+
+If you kubernetes `CA` is sign by yourself, you should place your `CA` file in the host path `/var/lib/yurthub/pki/ca.crt`.
+
 and the Yurthub will be ready in minutes.
 
 ## Setup Yurt-tunnel (Optional)
