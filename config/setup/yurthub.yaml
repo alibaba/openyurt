@@ -1,62 +1,80 @@
-apiVersion: v1
-kind: Pod
+apiVersion: apps/v1
+kind: DaemonSet
 metadata:
   labels:
     k8s-app: yurt-hub
   name: yurt-hub
   namespace: kube-system
 spec:
-  volumes:
-  - name: pki
-    hostPath:
-      path: __pki_path__
-      type: Directory
-  - name: kubernetes
-    hostPath:
-      path: /etc/kubernetes
-      type: Directory
-  - name: pem-dir
-    hostPath:
-      path: /var/lib/kubelet/pki
-      type: Directory
-  containers:
-  - name: yurt-hub
-    image: openyurt/yurthub:latest
-    imagePullPolicy: Always
-    volumeMounts:
-    - name: kubernetes
-      mountPath: /etc/kubernetes
-    - name: pki
-      mountPath: /etc/kubernetes/pki
-    - name: pem-dir
-      mountPath: /var/lib/kubelet/pki
-    command:
-    - yurthub
-    - --v=2
-    - --server-addr=https://__kubernetes_service_host__:__kubernetes_service_port_https__
-    - --node-name=$(NODE_NAME)
-    livenessProbe:
-      httpGet:
-        host: 127.0.0.1
-        path: /v1/healthz
-        port: 10267
-      initialDelaySeconds: 300
-      periodSeconds: 5
-      failureThreshold: 3
-    resources:
-      requests:
-        cpu: 150m
-        memory: 150Mi
-      limits:
-        memory: 300Mi
-    securityContext:
-      capabilities:
-        add: ["NET_ADMIN", "NET_RAW"]
-    env:
-    - name: NODE_NAME
-      valueFrom:
-        fieldRef:
-          fieldPath: spec.nodeName
-  hostNetwork: true
-  priorityClassName: system-node-critical
-  priority: 2000001000
+  selector:
+    matchLabels:
+      k8s-app: yurt-hub
+  template:
+    metadata:
+      labels:
+        k8s-app: yurt-hub
+    spec:
+      nodeSelector:
+        openyurt.io/is-edge-worker: "true"
+      volumes:
+      - name: pki
+        hostPath:
+          path: /etc/kubernetes/pki
+          type: Directory
+      - name: kubernetes
+        hostPath:
+          path: /etc/kubernetes
+          type: Directory
+      - name: pem-dir
+        hostPath:
+          path: /var/lib/kubelet/pki
+          type: Directory
+      - name: hub-dir
+        hostPath:
+          path: /var/lib/yurthub/pki
+          type: Directory
+      containers:
+      - name: yurt-hub
+        image: openyurt/yurthub:latest
+        imagePullPolicy: Always
+        volumeMounts:
+        - name: kubernetes
+          mountPath: /etc/kubernetes
+        - name: pki
+          mountPath: /etc/kubernetes/pki
+        - name: pem-dir
+          mountPath: /var/lib/kubelet/pki
+        - name: hub-dir
+          mountPath: /var/lib/yurthub/pki
+        command:
+        - yurthub
+        - --v=2
+        # if you use bootstrap token, please uncomment this and replace __kubernetes_botstrap_token__ with your kubelet bootstrap token
+        #- --join-token=__kubernetes_bootstrap_token__
+        - --server-addr=https://__kubernetes_service_host__:__kubernetes_service_port_https__
+        - --node-name=$(NODE_NAME)
+        livenessProbe:
+          httpGet:
+            host: 127.0.0.1
+            path: /v1/healthz
+            port: 10267
+          initialDelaySeconds: 300
+          periodSeconds: 5
+          failureThreshold: 3
+        resources:
+          requests:
+            cpu: 150m
+            memory: 150Mi
+          limits:
+            memory: 300Mi
+        securityContext:
+          capabilities:
+            add: ["NET_ADMIN", "NET_RAW"]
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+      hostNetwork: true
+      priorityClassName: system-node-critical
+      priority: 2000001000

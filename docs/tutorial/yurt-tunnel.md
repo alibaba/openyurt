@@ -113,7 +113,8 @@ edge node, which allows the yurt-tunnel-agent to be run on the edge node:
 kubectl label nodes minikube-m02 openyurt.io/is-edge-worker=true
 ```
 
-And, apply the yurt-tunnel-agent yaml:
+And, replace `__kubernetes_service_host__`, `__kubernetes_service_port_https__` with your `kube-apiserver` server address and port, then  apply the yurt-tunnel-agent yaml:
+
 ```bash
 kubectl apply -f config/setup/yurt-tunnel-agent.yaml
 ```
